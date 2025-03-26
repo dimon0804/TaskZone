@@ -50,11 +50,8 @@ async def get_sum_tasks(id: int):
     """ Получение количества задач в проекте """
     async with async_session() as session:
         result = await session.execute(select(Task).where(Task.project_id == id))
-        project = result.scalars().first()
-        if project:
-            return len(project.id)
-        else:
-            return 0
+        tasks = result.scalars().all()
+        return len(tasks)
         
 async def check_name_project(title: str):
     """ Проверка на существование проекта """
@@ -62,3 +59,32 @@ async def check_name_project(title: str):
         result = await session.execute(select(Project).where(Project.title == title))
         return result.scalars().first()
     
+async def add_task(id_project: int, title: str, description: str, due_date: str, user_id: int):
+    """ Создание задачи """
+    async with async_session() as session:
+        async with session.begin():
+            project = await get_project(int(id_project))
+            user = await get_user(user_id)
+            if project:
+                task = Task(user_id=user.id, assigned_to=user.id, project_id=project.id, title=title, description=description, due_date=due_date)
+                session.add(task)
+                await session.commit()
+                return task
+            else:
+                return None
+
+async def get_tasks(tg_id: int):
+    """ Получение задач пользователя """
+    async with async_session() as session:
+        user = await get_user(tg_id)
+        if user:
+            result = await session.execute(select(Task).where(Task.user_id == user.id))
+            return result.scalars().all()
+        else:
+            return None
+
+async def get_task(id: int):
+    """ Получение задачи по ID """
+    async with async_session() as session:
+        result = await session.execute(select(Task).where(Task.id == id))
+        return result.scalars().first()
