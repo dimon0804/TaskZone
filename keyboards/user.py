@@ -46,7 +46,7 @@ async def task_num(task_id):
         InlineKeyboardButton(text="Изменить приоритет", callback_data=f'change_priority_{task_id}'),
         InlineKeyboardButton(text="Изменить дедлайн", callback_data=f'change_due_date_{task_id}')],
 
-        [InlineKeyboardButton(text="Удалить задачу", callback_data=f'dell_tasks_{task_id}')],
+        [InlineKeyboardButton(text="Удалить задачу", callback_data=f'delete_tasks_{task_id}')],
         [InlineKeyboardButton(text='Назад', callback_data='back')]
     ])
 
