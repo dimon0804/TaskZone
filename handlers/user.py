@@ -8,6 +8,7 @@ import text
 from states import user as states
 from keyboards import user as kb
 from config import TASK_STATUSES, TASK_PRIORITIES
+from utils.calendar import CalendarKeyboard
 
 
 router = Router()
@@ -60,6 +61,7 @@ async def create_task_name(message: Message, state: FSMContext):
     await message.answer(text.create_task_description)
     await state.set_state(states.CreateTask.description)
 
+selected_date = None
 @router.message(states.CreateTask.description)
 async def create_task_description(message: Message, state: FSMContext):
     if message.text.lower() in ['отмена', '/cancel']:
@@ -67,28 +69,14 @@ async def create_task_description(message: Message, state: FSMContext):
         await message.answer(text.cancel, reply_markup=kb.menu)
         return
     await state.update_data(description=message.text)
-    await message.answer(text.create_task_due)
-    await state.set_state(states.CreateTask.due_date)
 
-@router.message(states.CreateTask.due_date)
-async def create_task_due(message: Message, state: FSMContext):
-    if message.text.lower() in ['отмена', '/cancel']:
-        await state.clear()
-        await message.answer(text.cancel, reply_markup=kb.menu)
-        return
-    await state.update_data(due_date=message.text)
-    data = await state.get_data()
-    id_project = data['id_project']
-    name = data['name']
-    description = data['description']
-    due_date = data['due_date']
-    user_id = message.from_user.id
-    await message.answer(text.create_task_finaly.format(name=name,
-                                                           description=description,
-                                                           due_date=due_date),
-                                                           reply_markup=kb.menu)
-    await state.clear()
-    await db.add_task(id_project, name, description, due_date, user_id)
+    calendar_keyboard = CalendarKeyboard()
+    calendar_markup = calendar_keyboard.get_keyboard()
+   
+    await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
+
+    await message.answer(text.create_task_due, reply_markup=calendar_markup)
+    await state.set_state(states.CreateTask.due_date)
 
 @router.message(F.content_type==ContentType.TEXT)
 async def text_message(message: Message, state: FSMContext):
@@ -200,6 +188,51 @@ async def callback_change_priority(callback: CallbackQuery, bot: Bot, state: FSM
     if new_priority in valid_priorities:
         await callback.message.answer(text.change_priority_finaly)
         await db.update_task_priority(action_data, new_priority)
+
+@router.callback_query(lambda query: query.data == "next_month")
+async def next_month(callback_query: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    calendar_keyboard = CalendarKeyboard(data['month'], data['year']).next_month()
+    calendar_markup = calendar_keyboard.get_keyboard()
+
+    await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
+
+    await callback_query.message.edit_text("Выберите день:", reply_markup=calendar_markup)
+
+@router.callback_query(lambda query: query.data == "prev_month")
+async def prev_month(callback_query: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    calendar_keyboard = CalendarKeyboard(data['month'], data['year']).prev_month()
+    calendar_markup = calendar_keyboard.get_keyboard()
+
+    await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
+    await callback_query.message.edit_text("Выберите день:", reply_markup=calendar_markup)
+
+@router.callback_query(lambda query: query.data.startswith("day_"), states.CreateTask.due_date)
+async def select_day(callback_query: CallbackQuery, state: FSMContext):
+    day = int(callback_query.data.split("_")[1])
+    data = await state.get_data()
+    calendar_keyboard = CalendarKeyboard(data['month'], data['year'])
+
+    if 1 <= day <= calendar_keyboard.days_in_month:
+        selected_date = calendar_keyboard.get_date(day)
+        await callback_query.message.edit_text(f"Вы выбрали {selected_date}")
+
+        await state.update_data(due_date=selected_date)
+        id_project = data['id_project']
+        name = data['name']
+        description = data['description']
+        user_id = callback_query.from_user.id
+
+        await callback_query.message.answer(
+            text.create_task_finaly.format(name=name, description=description, due_date=selected_date),
+            reply_markup=kb.menu
+        )
+
+        await db.add_task(id_project, name, description, selected_date, user_id)
+        await state.clear()
+    else:
+        await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.")
 
 @router.callback_query()
 async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
