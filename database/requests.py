@@ -127,3 +127,16 @@ async def update_due(task_id: int, due_date: str):
                 return task
             else:
                 return None
+
+async def delete_task(id: int):
+    """ Удаление задачи """
+    async with async_session() as session:
+        async with session.begin():
+            task = await get_task(id)
+            if task:
+                await session.delete(task)
+                await session.commit()
+                return True
+            else:
+                return False
+            

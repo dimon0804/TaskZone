@@ -204,6 +204,14 @@ async def callback_change_due_date(callback: CallbackQuery, bot: Bot, state: FSM
     await callback.message.answer(text.change_task_due, reply_markup=calendar_markup)
     await state.set_state(states.UpdateTask.due_date)
 
+@router.callback_query(F.data.startswith("delete_task_"))
+async def callback_delete_task(callback: CallbackQuery, bot: Bot):
+    await bot.delete_message(chat_id=callback.message.chat.id,
+                             message_id=callback.message.message_id)
+    action_data = callback.data[len("delete_task_"):]
+    await callback.message.answer(text.delete_task_finaly)
+    await db.delete_task(int(action_data))
+
 @router.callback_query(lambda query: query.data == "next_month")
 async def next_month(callback_query: CallbackQuery, state: FSMContext):
     data = await state.get_data()
