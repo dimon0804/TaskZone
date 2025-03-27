@@ -114,3 +114,16 @@ async def update_task_priority(id: int, priority: str):
                 return task
             else:
                 return None
+
+async def update_due(task_id: int, due_date: str):
+    """ Обновление срока задачи """
+    async with async_session() as session:
+        async with session.begin():
+            task = await get_task(task_id)
+            if task:
+                task.due_date = due_date
+                session.add(task)
+                await session.commit()
+                return task
+            else:
+                return None

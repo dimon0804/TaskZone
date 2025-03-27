@@ -9,3 +9,5 @@ class CreateTask(StatesGroup):
     description = State()
     due_date = State()
     
+class UpdateTask(StatesGroup):
+    due_date = State()

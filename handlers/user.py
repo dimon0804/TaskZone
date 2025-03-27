@@ -189,6 +189,21 @@ async def callback_change_priority(callback: CallbackQuery, bot: Bot, state: FSM
         await callback.message.answer(text.change_priority_finaly)
         await db.update_task_priority(action_data, new_priority)
 
+@router.callback_query(F.data.startswith("change_due_date_"))
+async def callback_change_due_date(callback: CallbackQuery, bot: Bot, state: FSMContext):
+    await bot.delete_message(chat_id=callback.message.chat.id,
+                             message_id=callback.message.message_id)
+
+    action_data = callback.data[len("change_due_date_"):]
+    await state.update_data(level='change_due_date', id_task=action_data)
+    calendar_keyboard = CalendarKeyboard()
+    calendar_markup = calendar_keyboard.get_keyboard()
+   
+    await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
+
+    await callback.message.answer(text.change_task_due, reply_markup=calendar_markup)
+    await state.set_state(states.UpdateTask.due_date)
+
 @router.callback_query(lambda query: query.data == "next_month")
 async def next_month(callback_query: CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -230,6 +245,30 @@ async def select_day(callback_query: CallbackQuery, state: FSMContext):
         )
 
         await db.add_task(id_project, name, description, selected_date, user_id)
+        await state.clear()
+    else:
+        await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.")
+
+@router.callback_query(lambda query: query.data.startswith("day_"), states.UpdateTask.due_date)
+async def select_day_update(callback_query: CallbackQuery, state: FSMContext):
+    day = int(callback_query.data.split("_")[1])
+    data = await state.get_data()
+    calendar_keyboard = CalendarKeyboard(data['month'], data['year'])
+
+    if 1 <= day <= calendar_keyboard.days_in_month:
+        selected_date = calendar_keyboard.get_date(day)
+        await callback_query.message.edit_text(f"Вы выбрали {selected_date}")
+
+        await state.update_data(due_date=selected_date)
+        id_task = data['id_task']
+        user_id = callback_query.from_user.id
+
+        await callback_query.message.answer(
+            text.change_task_due_finaly,
+            reply_markup=kb.menu
+        )
+
+        await db.update_due(int(id_task), selected_date)
         await state.clear()
     else:
         await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.")
