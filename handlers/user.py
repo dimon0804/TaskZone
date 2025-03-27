@@ -7,6 +7,7 @@ import database.requests as db
 import text
 from states import user as states
 from keyboards import user as kb
+from config import TASK_STATUSES
 
 
 router = Router()
@@ -126,7 +127,7 @@ async def callback_tasks(callback: CallbackQuery, bot: Bot, state: FSMContext):
                                                       project=project.title,
                                                       due_date=task.due_date,
                                                       date_creat=task.created_at, 
-                                                      status=task.status,
+                                                      status=TASK_STATUSES.get(task.status, "Неизвестный статус"),
                                                       priority=task.priority, 
                                                       updated_at=task.updated_at
                                                       ), 
@@ -140,6 +141,37 @@ async def callback_cr_project(callback: CallbackQuery, bot: Bot, state: FSMConte
     await state.update_data(id_project=action_data)
     await callback.message.answer(text.create_task_name)
     await state.set_state(states.CreateTask.name)
+
+@router.callback_query(F.data.startswith("change_status_"))
+async def callback_change_status(callback: CallbackQuery, bot: Bot, state: FSMContext):
+    await bot.delete_message(chat_id=callback.message.chat.id, 
+                             message_id=callback.message.message_id)
+
+    data_parts = callback.data.split("_")
+
+    if len(data_parts) < 3 or not data_parts[2].isdigit():
+        await callback.message.answer("Invalid task ID. Please try again.")
+        return
+
+    action_data = int(data_parts[2])
+    
+    # Если в callback нет статуса, значит, нужно показать клавиатуру выбора статусов
+    if len(data_parts) == 3:
+        await state.update_data(level='change_status')
+        await callback.message.answer(text.change_status_message,
+                                      reply_markup=await kb.change_status(action_data))
+        return
+
+    new_status = "_".join(data_parts[3:])
+
+    valid_statuses = {
+        "not_started", "in_progress", "pending_review",
+        "needs_revision", "completed", "canceled", "paused"
+    }
+
+    if new_status in valid_statuses:
+        await callback.message.answer(text.change_status_finaly)
+        await db.update_task_status(action_data, new_status)
 
 @router.callback_query()
 async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
@@ -181,3 +213,17 @@ async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
             projects = await db.get_projects(callback.from_user.id)
             await callback.message.answer(text.projects_message,
                                           reply_markup=await kb.my_projects(projects=projects))
+        elif level == "list_task":
+            await callback.message.answer(text.tasks_message, reply_markup=kb.task)
+        elif level == "see_tasks":
+            tasks = await db.get_tasks(callback.from_user.id)
+            await callback.message.answer(text.tasks_message_l,
+                                          reply_markup=await kb.my_tasks(tasks=tasks))
+        elif level == "choice_project":
+            projects = await db.get_projects(callback.from_user.id)
+            await callback.message.answer(text.choice_project,
+                                          reply_markup=await kb.choice_projects(projects=projects))
+        elif level == "change_status":
+            tasks = await db.get_tasks(callback.from_user.id)
+            await callback.message.answer(text.tasks_message_l,
+                                          reply_markup=await kb.my_tasks(tasks=tasks))

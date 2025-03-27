@@ -88,3 +88,16 @@ async def get_task(id: int):
     async with async_session() as session:
         result = await session.execute(select(Task).where(Task.id == id))
         return result.scalars().first()
+    
+async def update_task_status(id: int, status: str):
+    """ Обновление статуса задачи """
+    async with async_session() as session:
+        async with session.begin():
+            task = await get_task(id)
+            if task:
+                task.status = status
+                session.add(task)
+                await session.commit()
+                return task
+            else:
+                return None

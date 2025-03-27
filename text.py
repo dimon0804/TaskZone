@@ -45,4 +45,8 @@ task = """Задача: {title}
 Приоритет: {priority}
 Проект: {project}
 Описание задачи: {description}"""
+
 cancel = 'Действие отменено...'
+
+change_status_message = """Выберите статус задачи"""
+change_status_finaly = """Статус задачи успешно изменен!"""

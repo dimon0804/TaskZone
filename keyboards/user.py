@@ -73,3 +73,15 @@ async def my_tasks(tasks):
     keyboard.append([InlineKeyboardButton(text='Назад', callback_data='back')])
     
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+async def change_status(action_data):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Не начато", callback_data=f'change_status_{action_data}_not_started')],
+        [InlineKeyboardButton(text="В процессе", callback_data=f'change_status_{action_data}_in_progress')],
+        [InlineKeyboardButton(text="Ожидание проверки", callback_data=f'change_status_{action_data}_pending_review')],
+        [InlineKeyboardButton(text="Требует доработки", callback_data=f'change_status_{action_data}_needs_revision')],
+        [InlineKeyboardButton(text="Завершено", callback_data=f'change_status_{action_data}_completed')],
+        [InlineKeyboardButton(text="Отменено", callback_data=f'change_status_{action_data}_canceled')],
+        [InlineKeyboardButton(text="Приостановлено", callback_data=f'change_status_{action_data}_paused')],
+        [InlineKeyboardButton(text="Назад", callback_data='back')]
+    ])
