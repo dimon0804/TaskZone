@@ -50,3 +50,5 @@ cancel = 'Действие отменено...'
 
 change_status_message = """Выберите статус задачи"""
 change_status_finaly = """Статус задачи успешно изменен!"""
+change_priority_message = """Выберите приоритет задачи"""
+change_priority_finaly = """Приоритет задачи успешно изменен!"""

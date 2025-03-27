@@ -7,7 +7,7 @@ import database.requests as db
 import text
 from states import user as states
 from keyboards import user as kb
-from config import TASK_STATUSES
+from config import TASK_STATUSES, TASK_PRIORITIES
 
 
 router = Router()
@@ -128,7 +128,7 @@ async def callback_tasks(callback: CallbackQuery, bot: Bot, state: FSMContext):
                                                       due_date=task.due_date,
                                                       date_creat=task.created_at, 
                                                       status=TASK_STATUSES.get(task.status, "Неизвестный статус"),
-                                                      priority=task.priority, 
+                                                      priority=TASK_PRIORITIES.get(task.priority, "Неизвестный приоритет"), 
                                                       updated_at=task.updated_at
                                                       ), 
                                                       reply_markup=await kb.task_num(action_data))
@@ -172,6 +172,34 @@ async def callback_change_status(callback: CallbackQuery, bot: Bot, state: FSMCo
     if new_status in valid_statuses:
         await callback.message.answer(text.change_status_finaly)
         await db.update_task_status(action_data, new_status)
+
+@router.callback_query(F.data.startswith("change_priority_"))
+async def callback_change_priority(callback: CallbackQuery, bot: Bot, state: FSMContext):
+    await bot.delete_message(chat_id=callback.message.chat.id, 
+                             message_id=callback.message.message_id)
+
+    data_parts = callback.data.split("_")
+
+    if len(data_parts) < 3 or not data_parts[2].isdigit():
+        await callback.message.answer("Invalid task ID. Please try again.")
+        return
+
+    action_data = int(data_parts[2])
+    
+    # Если в callback нет приоритета, значит, нужно показать клавиатуру выбора приоритетов
+    if len(data_parts) == 3:
+        await state.update_data(level='change_priority')
+        await callback.message.answer(text.change_priority_message,
+                                      reply_markup=await kb.change_priority(action_data))
+        return
+
+    new_priority = "_".join(data_parts[3:])
+
+    valid_priorities = {"none", "low", "medium", "high", "urgent"}
+
+    if new_priority in valid_priorities:
+        await callback.message.answer(text.change_priority_finaly)
+        await db.update_task_priority(action_data, new_priority)
 
 @router.callback_query()
 async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):

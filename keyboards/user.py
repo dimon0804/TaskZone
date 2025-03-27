@@ -85,3 +85,13 @@ async def change_status(action_data):
         [InlineKeyboardButton(text="Приостановлено", callback_data=f'change_status_{action_data}_paused')],
         [InlineKeyboardButton(text="Назад", callback_data='back')]
     ])
+
+async def change_priority(action_data):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Без приоритета", callback_data=f'change_priority_{action_data}_none')],
+        [InlineKeyboardButton(text="Низкий", callback_data=f'change_priority_{action_data}_low')],
+        [InlineKeyboardButton(text="Средний", callback_data=f'change_priority_{action_data}_medium')],
+        [InlineKeyboardButton(text="Высокий", callback_data=f'change_priority_{action_data}_high')],
+        [InlineKeyboardButton(text="Срочный", callback_data=f'change_priority_{action_data}_urgent')],
+        [InlineKeyboardButton(text="Назад", callback_data='back')]
+    ])

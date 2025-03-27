@@ -101,3 +101,16 @@ async def update_task_status(id: int, status: str):
                 return task
             else:
                 return None
+            
+async def update_task_priority(id: int, priority: str):
+    """ Обновление приоритета задачи """
+    async with async_session() as session:
+        async with session.begin():
+            task = await get_task(id)
+            if task:
+                task.priority = priority
+                session.add(task)
+                await session.commit()
+                return task
+            else:
+                return None

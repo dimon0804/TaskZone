@@ -27,3 +27,11 @@ TASK_STATUSES = {
     "canceled": "Отменено",
     "paused": "Приостановлено"
 }
+
+TASK_PRIORITIES = {
+    "none": "Без приоритета",
+    "low": "Низкий",
+    "medium": "Средний",
+    "high": "Высокий",
+    "urgent": "Срочный"
+}
