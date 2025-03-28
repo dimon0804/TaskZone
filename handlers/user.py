@@ -228,8 +228,7 @@ async def see_tasks(callback_query: CallbackQuery, state: FSMContext):
     action_data = int(callback_query.data[len("see_tasks_"):])
     await callback_query.message.answer(text.tasks_message_l,
                                         reply_markup=await kb.my_tasks(await db.get_tasks_by_project(action_data)))
-    
-#  add_task_ 
+
 @router.callback_query(lambda query: query.data.startswith("add_task_"))
 async def add_task(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(level='add_task')
@@ -237,6 +236,13 @@ async def add_task(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(id_project=action_data)
     await callback_query.message.answer(text.create_task_name)
     await state.set_state(states.CreateTask.name)
+
+@router.callback_query(lambda query: query.data.startswith("delete_project_"))
+async def delete_project(callback_query: CallbackQuery, state: FSMContext):
+    await state.update_data(level='delete_project')
+    action_data = int(callback_query.data[len("delete_project_"):])
+    await callback_query.message.answer(text.delete_project_finaly)
+    await db.delete_project(action_data)
 
 @router.callback_query(lambda query: query.data == "prev_month")
 async def prev_month(callback_query: CallbackQuery, state: FSMContext):

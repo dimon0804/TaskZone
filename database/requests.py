@@ -145,3 +145,16 @@ async def get_tasks_by_project(project_id: int):
     async with async_session() as session:
         result = await session.execute(select(Task).where(Task.project_id == project_id))
         return result.scalars().all()
+    
+async def delete_project(id: int):
+    """ Удаление проекта """
+    async with async_session() as session:
+        async with session.begin():
+            project = await get_project(id)
+            if project:
+                await session.execute(Task.__table__.delete().where(Task.project_id == id))
+                await session.delete(project)
+                await session.commit()
+                return True
+            else:
+                return False
