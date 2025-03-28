@@ -183,3 +183,10 @@ async def get_log(user_id: int, action: str):
     async with async_session() as session:
         result = await session.execute(select(Log).where(Log.user_id == user_id, Log.action == action))
         return result.scalars().first()
+
+async def get_tasks_with_users():
+    async with async_session() as session:
+        tasks = await session.execute(
+            select(Task, User.tg_id).join(User, Task.user_id == User.id)
+        )
+        return tasks.all()

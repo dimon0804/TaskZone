@@ -95,3 +95,13 @@ async def change_priority(action_data):
         [InlineKeyboardButton(text="Срочный", callback_data=f'change_priority_{action_data}_urgent')],
         [InlineKeyboardButton(text="Назад", callback_data='back')]
     ])
+
+miss = ReplyKeyboardMarkup(resize_keyboard=True, 
+                                keyboard=[
+                                    [KeyboardButton(text='Пропуск')]])
+
+async def task_notif(task_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Посмотреть задачу", callback_data=f'tasks_{task_id}')],
+        [InlineKeyboardButton(text="Изменить статус", callback_data=f'change_status_{task_id}')],
+    ])

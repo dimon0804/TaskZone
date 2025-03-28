@@ -58,7 +58,7 @@ async def create_task_name(message: Message, state: FSMContext):
         await message.answer(text.cancel, reply_markup=kb.menu)
         return
     await state.update_data(name=message.text)
-    await message.answer(text.create_task_description)
+    await message.answer(text.create_task_description, reply_markup=kb.miss)
     await state.set_state(states.CreateTask.description)
 
 selected_date = None
@@ -287,7 +287,7 @@ async def select_day(callback_query: CallbackQuery, state: FSMContext):
         await db.add_task(id_project, name, description, selected_date, user_id)
         await state.clear()
     else:
-        await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.")
+        await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.", reply_markup=kb.menu)
 
 @router.callback_query(lambda query: query.data.startswith("day_"), states.UpdateTask.due_date)
 async def select_day_update(callback_query: CallbackQuery, state: FSMContext):

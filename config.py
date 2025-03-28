@@ -58,3 +58,6 @@ LOG_ACTIONS = {
     "user_register": "Регистрация пользователя",
     "user_update": "Обновить данные пользователя"
 }
+
+NOTIFICATION_HOUR = 23
+NOTIFICATION_MINUTE = 34
