@@ -66,3 +66,6 @@ profile_message = """Профиль: {fullname}
 Зарегистрирован с: {date_reg}
 Всего проектов: {count_project}
 Всего задач: {count_task}"""
+
+settings_notif_message = "Выберете нужное вам время для оповещения о дедлайнах"
+settings_notif_finaly = "Вы изменили время отправки оповещений о дедлайнах на {time}"

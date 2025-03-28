@@ -108,8 +108,8 @@ async def task_notif(task_id):
     ])
 
 notif = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='Напоминания', callback_data='reminders'), 
-     InlineKeyboardButton(text='Настроить уведомления (дедлайны)', callback_data='settings_notif')],
+    [InlineKeyboardButton(text='Напоминания', callback_data='reminders')], 
+     [InlineKeyboardButton(text='Настроить уведомления (дедлайны)', callback_data='settings_notif')],
 ])
 
 reminders = InlineKeyboardMarkup(inline_keyboard=[
@@ -128,3 +128,10 @@ async def my_reminders(reminders):
     keyboard.append([InlineKeyboardButton(text='Назад', callback_data='back')])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+settings_notif = ReplyKeyboardMarkup(resize_keyboard=True, 
+                                keyboard=[
+                                    [KeyboardButton(text=f'{hour:02d}:{minute:02d}') for minute in (0, 30)]
+                                    for hour in range(24)
+                                ])
+

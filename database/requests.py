@@ -190,3 +190,16 @@ async def get_tasks_with_users():
             select(Task, User.tg_id, User.notif_time).join(User, Task.user_id == User.id)
         )
         return tasks.all()
+    
+async def update_time(tg_id: int, time: str):
+    """ Обновление времени уведомлений """
+    async with async_session() as session:
+        async with session.begin():
+            user = await get_user(tg_id)
+            if user:
+                user.notif_time = time
+                session.add(user)
+                await session.commit()
+                return user
+            else:
+                return None

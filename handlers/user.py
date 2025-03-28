@@ -9,6 +9,7 @@ from states import user as states
 from keyboards import user as kb
 from config import TASK_STATUSES, TASK_PRIORITIES
 from utils.calendar import CalendarKeyboard
+import re
 
 
 router = Router()
@@ -78,6 +79,26 @@ async def create_task_description(message: Message, state: FSMContext):
     await message.answer(text.create_task_due, reply_markup=calendar_markup)
     await state.set_state(states.CreateTask.due_date)
 
+@router.message(states.SettingsNotif.time)
+async def settings_notif_time(message: Message, state: FSMContext):
+    if message.text.lower() in ['отмена', '/cancel']:
+        await state.clear()
+        await message.answer(text.cancel, reply_markup=kb.menu)
+        return
+    
+    # Check if the input matches the HH:MM format
+    if not message.text or not re.match(r"^(?:[01]?\d|2[0-3]):[0-5]\d$", message.text):
+        await message.answer("Пожалуйста, введите время в формате HH:MM (например, 00:30 или 14:30).")
+        return
+    
+    await state.update_data(time=message.text)
+    data = await state.get_data()
+    time = data['time']
+    await message.answer(text.settings_notif_finaly.format(time=time),
+                         reply_markup=kb.menu)
+    await db.update_time(message.from_user.id, time)
+    await state.clear()
+
 @router.message(F.content_type==ContentType.TEXT)
 async def text_message(message: Message, state: FSMContext):
     if message.text.lower() in ['проекты', '/project']:
@@ -94,6 +115,8 @@ async def text_message(message: Message, state: FSMContext):
                                                          count_task=count_task,
                                                          fullname=message.from_user.full_name), 
                              reply_markup=kb.menu)
+    elif message.text.lower() in ['напоминания', "/notifications"]:
+        await message.answer(text.settings_notif_message, reply_markup=kb.notif)
     elif message.text.lower() in ['отмена', '/cancel']:
         await state.clear()
         await message.answer(text.cancel, reply_markup=kb.menu)
@@ -341,6 +364,9 @@ async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
         await callback.message.answer(text.tasks_message_l, 
                                       reply_markup=await kb.my_tasks(tasks=tasks))
         await state.update_data(level="list_task")
+    elif callback.data == "settings_notif":
+        await callback.message.answer(text.settings_notif_message, reply_markup=kb.settings_notif)
+        await state.set_state(states.SettingsNotif.time)
     elif callback.data == "back":
         await bot.delete_message(chat_id=callback.message.chat.id, 
                                  message_id=callback.message.message_id)

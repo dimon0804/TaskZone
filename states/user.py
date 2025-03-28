@@ -11,3 +11,6 @@ class CreateTask(StatesGroup):
     
 class UpdateTask(StatesGroup):
     due_date = State()
+
+class SettingsNotif(StatesGroup):
+    time = State()
