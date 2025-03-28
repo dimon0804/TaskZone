@@ -50,6 +50,14 @@ class Project(Base):
     description: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(String, default=now_moscow)
 
+class Log(Base):
+    __tablename__ = "logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String)
+    created_at: Mapped[str] = mapped_column(String, default=now_moscow)
+
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

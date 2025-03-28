@@ -21,7 +21,12 @@ class CalendarKeyboard:
             InlineKeyboardButton(text="Следующий месяц >>", callback_data="next_month"),
         ]
         keyboard.append(navigation_row)
+        days_of_week = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+        keyboard.append([InlineKeyboardButton(text=day, callback_data="day_of_week") for day in days_of_week])
         week = []
+        first_weekday = calendar.monthrange(self.current_year, self.current_month)[0]
+        for _ in range(first_weekday):
+            week.append(InlineKeyboardButton(text=" ", callback_data="empty"))
         for day in range(1, self.days_in_month + 1):
             week.append(InlineKeyboardButton(text=str(day), callback_data=f"day_{day}"))
             if len(week) == 7:

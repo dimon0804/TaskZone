@@ -84,6 +84,16 @@ async def text_message(message: Message, state: FSMContext):
         await message.answer(text.project_message, reply_markup=kb.project)
     elif message.text.lower() in ['задачи', '/tasks']:
         await message.answer(text.tasks_message, reply_markup=kb.task)
+    elif message.text.lower() in ['профиль', '/profile']:
+        user = await db.get_user(message.from_user.id)
+        date_reg = user.created_at
+        count_project = len(await db.get_projects(message.from_user.id))
+        count_task = len(await db.get_tasks(message.from_user.id))
+        await message.answer(text.profile_message.format(date_reg=date_reg,
+                                                         count_project=count_project, 
+                                                         count_task=count_task,
+                                                         fullname=message.from_user.full_name), 
+                             reply_markup=kb.menu)
     elif message.text.lower() in ['отмена', '/cancel']:
         await state.clear()
         await message.answer(text.cancel, reply_markup=kb.menu)

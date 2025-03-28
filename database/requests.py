@@ -1,5 +1,5 @@
 from sqlalchemy.future import select
-from .models import User, Project, Task, async_session
+from .models import User, Project, Task, Log, async_session
 
 
 async def add_user(tg_id: int, name: str) -> User:
@@ -158,3 +158,28 @@ async def delete_project(id: int):
                 return True
             else:
                 return False
+            
+async def add_log(user_id: int, action: str):
+    """ Создание лога """
+    async with async_session() as session:
+        async with session.begin():
+            log = Log(user_id=user_id, action=action)
+            session.add(log)
+            await session.commit()
+            return log
+
+async def get_logs(tg_id: int):
+    """ Получение логов пользователя """
+    async with async_session() as session:
+        user = await get_user(tg_id)
+        if user:
+            result = await session.execute(select(Log).where(Log.user_id == user.id))
+            return result.scalars().all()
+        else:
+            return None
+        
+async def get_log(user_id: int, action: str):
+    """ Получение лога по действию """
+    async with async_session() as session:
+        result = await session.execute(select(Log).where(Log.user_id == user_id, Log.action == action))
+        return result.scalars().first()
