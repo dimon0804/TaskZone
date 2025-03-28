@@ -3,22 +3,20 @@ import logging
 from datetime import datetime, timedelta
 from aiogram import Bot
 from database.requests import get_tasks_with_users
-from config import NOTIFICATION_HOUR, NOTIFICATION_MINUTE
 import keyboards.user as kb
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-
 async def check_deadlines(bot: Bot):
     while True:
         now = datetime.now()
-        logging.info("Проверка времени: %s", now.strftime("%H:%M:%S"))
-        if now.hour == NOTIFICATION_HOUR and now.minute == NOTIFICATION_MINUTE:
-            logging.info("Время для отправки уведомлений!")
-            await send_notifications(bot)
-        await asyncio.sleep(60)
+        current_time_str = now.strftime("%H:%M")  # Текущее время в формате "HH:MM"
+        logging.info("Проверка времени: %s", current_time_str)
+        
+        await send_notifications(bot, current_time_str)
+        await asyncio.sleep(60)  # Проверяем каждую минуту
 
-async def send_notifications(bot: Bot):
+async def send_notifications(bot: Bot, current_time_str: str):
     now = datetime.now().date()
     logging.info("Получение задач из базы данных...")
     
@@ -26,13 +24,14 @@ async def send_notifications(bot: Bot):
 
     logging.info("Найдено %d задач", len(task_list))
 
-    for task, telegram_id in task_list:
+    for task, telegram_id, notif_time in task_list:
         try:
-            deadline = datetime.strptime(task.due_date, "%d.%m.%Y").date()
-            text = get_notification_text(task.title, deadline, now)
-            if text:
-                logging.info("Отправка уведомления пользователю %d: %s", telegram_id, text)
-                await bot.send_message(chat_id=telegram_id, text=text, reply_markup=await kb.task_notif(task.id))
+            if notif_time == current_time_str:  # Проверка времени для каждого пользователя
+                deadline = datetime.strptime(task.due_date, "%d.%m.%Y").date()
+                text = get_notification_text(task.title, deadline, now)
+                if text:
+                    logging.info("Отправка уведомления пользователю %d: %s", telegram_id, text)
+                    await bot.send_message(chat_id=telegram_id, text=text, reply_markup=await kb.task_notif(task.id))
         except Exception as e:
             logging.error("Ошибка при обработке задачи ID %d: %s", task.id, str(e))
 

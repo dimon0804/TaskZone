@@ -4,6 +4,7 @@ menu = ReplyKeyboardMarkup(resize_keyboard=True,
                                 keyboard=[
                                     [KeyboardButton(text='Быстрая задача')],
                                     [KeyboardButton(text='Проекты'), KeyboardButton(text='Задачи')], 
+                                    [KeyboardButton(text='Напоминания')],
                                     [KeyboardButton(text='Профиль')]])
 
 cancel = ReplyKeyboardMarkup(resize_keyboard=True, 
@@ -105,3 +106,25 @@ async def task_notif(task_id):
         [InlineKeyboardButton(text="Посмотреть задачу", callback_data=f'tasks_{task_id}')],
         [InlineKeyboardButton(text="Изменить статус", callback_data=f'change_status_{task_id}')],
     ])
+
+notif = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='Напоминания', callback_data='reminders'), 
+     InlineKeyboardButton(text='Настроить уведомления (дедлайны)', callback_data='settings_notif')],
+])
+
+reminders = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text='Создать напоминание', callback_data='create_reminder'),
+     InlineKeyboardButton(text='Мои напоминания', callback_data='my_reminders')],
+])
+
+async def my_reminders(reminders):
+    if not reminders:
+        return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='У вас нет напоминаний', callback_data='back')]])
+
+    keyboard = [
+        [InlineKeyboardButton(text=reminder.title, callback_data=f'reminder_{reminder.id}')]
+        for reminder in reminders
+    ]
+    keyboard.append([InlineKeyboardButton(text='Назад', callback_data='back')])
+
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

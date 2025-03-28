@@ -24,6 +24,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String)
     created_at: Mapped[str] = mapped_column(String, default=now_moscow)
     last_active: Mapped[str] = mapped_column(String, default=now_moscow, onupdate=now_moscow)
+    notif_time: Mapped[str] = mapped_column(String, default="00:00")
     role: Mapped[str] = mapped_column(String, default="user")
 
 class Task(Base):
