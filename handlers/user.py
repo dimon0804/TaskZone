@@ -221,6 +221,13 @@ async def next_month(callback_query: CallbackQuery, state: FSMContext):
     await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
 
     await callback_query.message.edit_text("Выберите день:", reply_markup=calendar_markup)
+ 
+@router.callback_query(lambda query: query.data.startswith("see_tasks_"))
+async def see_tasks(callback_query: CallbackQuery, state: FSMContext):
+    await state.update_data(level='see_tasks')
+    action_data = int(callback_query.data[len("see_tasks_"):])
+    await callback_query.message.answer(text.tasks_message_l,
+                                        reply_markup=await kb.my_tasks(await db.get_tasks_by_project(action_data)))
 
 @router.callback_query(lambda query: query.data == "prev_month")
 async def prev_month(callback_query: CallbackQuery, state: FSMContext):

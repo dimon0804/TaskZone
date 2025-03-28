@@ -140,3 +140,8 @@ async def delete_task(id: int):
             else:
                 return False
             
+async def get_tasks_by_project(project_id: int):
+    """ Получение задач по ID проекта """
+    async with async_session() as session:
+        result = await session.execute(select(Task).where(Task.project_id == project_id))
+        return result.scalars().all()
