@@ -9,6 +9,7 @@ import config as cfg
 from handlers.user import router 
 from database.models import async_main
 from utils.notifier import start_notifier
+from utils.reminder import start_notifier
 
 async def main() -> None:
     load_dotenv()
@@ -16,6 +17,7 @@ async def main() -> None:
     bot = Bot(token=cfg.BOT_TOKEN, default=default)
     dp = Dispatcher(storage=MemoryStorage())
     await async_main()
+    await start_notifier(bot)
     await start_notifier(bot)
     dp.include_router(router)
     await bot.delete_webhook(drop_pending_updates=True)

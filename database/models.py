@@ -59,6 +59,20 @@ class Log(Base):
     action: Mapped[str] = mapped_column(String)
     created_at: Mapped[str] = mapped_column(String, default=now_moscow)
 
+class Reminder(Base):
+    __tablename__ = "reminders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    title: Mapped[str] = mapped_column(String)
+    text: Mapped[str] = mapped_column(String)
+    date: Mapped[str] = mapped_column(String)
+    time: Mapped[str] = mapped_column(String)
+    rules: Mapped[str] = mapped_column(String)
+    sending_time: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    created_at: Mapped[str] = mapped_column(String, default=now_moscow)
+    updated_at: Mapped[str] = mapped_column(String, default=now_moscow, onupdate=now_moscow)
+
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

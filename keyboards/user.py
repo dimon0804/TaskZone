@@ -113,8 +113,8 @@ notif = InlineKeyboardMarkup(inline_keyboard=[
 ])
 
 reminders = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text='Создать напоминание', callback_data='create_reminder'),
-     InlineKeyboardButton(text='Мои напоминания', callback_data='my_reminders')],
+     [InlineKeyboardButton(text='Мои напоминания', callback_data='my_reminders')],
+    [InlineKeyboardButton(text='Создать напоминание', callback_data='create_reminder')],
 ])
 
 async def my_reminders(reminders):
@@ -129,9 +129,23 @@ async def my_reminders(reminders):
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
+async def reminder_num(reminder_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Удалить напоминание", callback_data=f'delete_reminder_{reminder_id}')],
+        [InlineKeyboardButton(text='Назад', callback_data='back')]
+    ])  
+
 settings_notif = ReplyKeyboardMarkup(resize_keyboard=True, 
                                 keyboard=[
                                     [KeyboardButton(text=f'{hour:02d}:{minute:02d}') for minute in (0, 30)]
                                     for hour in range(24)
                                 ])
 
+rules = ReplyKeyboardMarkup(resize_keyboard=True,
+                            keyboard=[
+                                [KeyboardButton(text="Единоразово")],
+                                [KeyboardButton(text="Каждый день")],
+                                [KeyboardButton(text="Через день")],
+                                [KeyboardButton(text="Раз в неделю")],
+                                [KeyboardButton(text="Раз в месяц")],
+                            ])

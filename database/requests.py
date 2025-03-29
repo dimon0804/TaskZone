@@ -1,5 +1,6 @@
 from sqlalchemy.future import select
-from .models import User, Project, Task, Log, async_session
+from datetime import datetime
+from .models import User, Project, Task, Log, Reminder, async_session
 
 
 async def add_user(tg_id: int, name: str) -> User:
@@ -203,3 +204,61 @@ async def update_time(tg_id: int, time: str):
                 return user
             else:
                 return None
+            
+async def get_reminders(tg_id: int):
+    """ Получение напоминаний пользователя """
+    async with async_session() as session:
+        user = await get_user(tg_id)
+        if user:
+            result = await session.execute(select(Reminder).where(Reminder.user_id == user.id))
+            return result.scalars().all()
+        else:
+            return None
+
+async def get_reminder(id: int):
+    """ Получение напоминания по ID """
+    async with async_session() as session:
+        result = await session.execute(select(Reminder).where(Reminder.id == id))
+        return result.scalars().first()
+    
+async def delete_reminder(id: int):
+    """ Удаление напоминания """
+    async with async_session() as session:
+        async with session.begin():
+            reminder = await get_reminder(id)
+            if reminder:
+                await session.delete(reminder)
+                await session.commit()
+                return True
+            else:
+                return False
+            
+async def add_reminder(tg_id: int, title: str, text: str, date: str, time: str, rules: str):
+    """ Создание напоминания """
+    async with async_session() as session:
+        async with session.begin():
+            user = await get_user(tg_id)
+            if user:
+                reminder = Reminder(user_id=user.id, title=title, text=text, date=date, time=time, rules=rules)
+                session.add(reminder)
+                await session.commit()
+                return reminder
+            else:
+                return None
+            
+async def get_reminders_with_users():
+    """ Получение напоминаний с пользователями """
+    async with async_session() as session:
+        result = await session.execute(
+            select(Reminder.id, Reminder.title, Reminder.text, Reminder.date, Reminder.time, Reminder.rules, User.tg_id)
+            .join(User, User.id == Reminder.user_id)
+        )
+        return result.all()
+    
+async def update_sending_time(reminder_id: int):
+    async with async_session() as session:
+        async with session.begin():
+            reminder = await session.get(Reminder, reminder_id)
+            if reminder:
+                reminder.sending_time = datetime.now().strftime("%d.%m.%Y")  # Обновляем время отправки
+                await session.commit()

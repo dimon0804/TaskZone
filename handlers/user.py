@@ -99,6 +99,82 @@ async def settings_notif_time(message: Message, state: FSMContext):
     await db.update_time(message.from_user.id, time)
     await state.clear()
 
+@router.message(states.CreateReminder.title)
+async def create_reminder_title(message: Message, state: FSMContext):
+    if message.text.lower() in ['отмена', '/cancel']:
+        await state.clear()
+        await message.answer(text.cancel, reply_markup=kb.menu)
+        return
+    await state.update_data(title=message.text)
+    await message.answer(text.create_reminder_text)
+    await state.set_state(states.CreateReminder.text)
+
+@router.message(states.CreateReminder.text)
+async def create_reminder_text(message: Message, state: FSMContext):
+    if message.text.lower() in ['отмена', '/cancel']:
+        await state.clear()
+        await message.answer(text.cancel, reply_markup=kb.menu)
+        return
+    await state.update_data(text=message.text)
+    calendar_keyboard = CalendarKeyboard()
+    calendar_markup = calendar_keyboard.get_keyboard()
+   
+    await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
+    await message.answer(text.create_reminder_date, reply_markup=calendar_markup)
+    await state.set_state(states.CreateReminder.date)
+
+# @router.message(states.CreateReminder.date)
+# async def create_reminder_date(message: Message, state: FSMContext):
+#     if message.text.lower() in ['отмена', '/cancel']:
+#         await state.clear()
+#         await message.answer(text.cancel, reply_markup=kb.menu)
+#         return
+#     await state.update_data(date=message.text)
+#     calendar_keyboard = CalendarKeyboard()
+#     calendar_markup = calendar_keyboard.get_keyboard()
+   
+#     await state.update_data(month=calendar_keyboard.current_month, year=calendar_keyboard.current_year)
+#     await message.answer(text.create_reminder_time, reply_markup=calendar_markup)
+#     await state.set_state(states.CreateReminder.time)
+
+@router.message(states.CreateReminder.time)
+async def create_reminder_time(message: Message, state: FSMContext):
+    if message.text.lower() in ['отмена', '/cancel']:
+        await state.clear()
+        await message.answer(text.cancel, reply_markup=kb.menu)
+        return
+    
+    if not message.text or not re.match(r"^(?:[01]?\d|2[0-3]):[0-5]\d$", message.text):
+        await message.answer("Пожалуйста, введите время в формате HH:MM (например, 00:30 или 14:30).")
+        return
+    
+    await state.update_data(time=message.text)
+    await message.answer(text.create_reminder_rules, reply_markup=kb.rules)
+    await state.set_state(states.CreateReminder.rules)
+
+@router.message(states.CreateReminder.rules)
+async def create_reminder_rules(message: Message, state: FSMContext):
+    if message.text.lower() in ['отмена', '/cancel']:
+        await state.clear()
+        await message.answer(text.cancel, reply_markup=kb.menu)
+        return
+    await state.update_data(rules=message.text)
+    data = await state.get_data()
+    title = data['title']
+    text_c = data['text']
+    date = data['date']
+    time = data['time']
+    rules = data['rules']
+    await message.answer(text.create_reminder_finaly.format(title=title,
+                                                           text=text_c,
+                                                           date=date,
+                                                           time=time,
+                                                           rules=rules,
+                                                           created_at=message.date),
+                                                           reply_markup=kb.menu)
+    await db.add_reminder(message.from_user.id, title, text_c, date, time, rules)
+    await state.clear()
+
 @router.message(F.content_type==ContentType.TEXT)
 async def text_message(message: Message, state: FSMContext):
     if message.text.lower() in ['проекты', '/project']:
@@ -277,6 +353,30 @@ async def delete_project(callback_query: CallbackQuery, state: FSMContext):
     await callback_query.message.answer(text.delete_project_finaly)
     await db.delete_project(action_data)
 
+@router.callback_query(lambda query: query.data.startswith("reminder_"))
+async def reminder(callback_query: CallbackQuery, state: FSMContext, bot: Bot):
+    await bot.delete_message(chat_id=callback_query.message.chat.id, 
+                                 message_id=callback_query.message.message_id)
+    await state.update_data(level='reminder')
+    action_data = int(callback_query.data[len("reminder_"):])
+    reminder_data = await db.get_reminder(action_data)
+    await callback_query.message.answer(text.reminder_message.format(title=reminder_data.title, 
+                                                                     text=reminder_data.text, 
+                                                                     date=reminder_data.date, 
+                                                                     time=reminder_data.time, 
+                                                                     rules=reminder_data.rules, 
+                                                                     created_at=reminder_data.created_at),
+                                        reply_markup=await kb.reminder_num(action_data))
+    
+@router.callback_query(lambda query: query.data.startswith("delete_reminder_"))
+async def delete_reminder(callback_query: CallbackQuery, state: FSMContext, bot: Bot):
+    await bot.delete_message(chat_id=callback_query.message.chat.id, 
+                                 message_id=callback_query.message.message_id)
+    await state.update_data(level='delete_reminder')
+    action_data = int(callback_query.data[len("delete_reminder_"):])
+    await callback_query.message.answer(text.delete_reminder_finaly)
+    await db.delete_reminder(action_data)
+
 @router.callback_query(lambda query: query.data == "prev_month")
 async def prev_month(callback_query: CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -336,6 +436,26 @@ async def select_day_update(callback_query: CallbackQuery, state: FSMContext):
     else:
         await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.")
 
+@router.callback_query(lambda query: query.data.startswith("day_"), states.CreateReminder.date)
+async def select_day_reminder(callback_query: CallbackQuery, state: FSMContext):
+    day = int(callback_query.data.split("_")[1])
+    data = await state.get_data()
+    calendar_keyboard = CalendarKeyboard(data['month'], data['year'])
+
+    if 1 <= day <= calendar_keyboard.days_in_month:
+        selected_date = calendar_keyboard.get_date(day)
+        await callback_query.message.edit_text(f"Вы выбрали {selected_date}")
+
+        await state.update_data(date=selected_date)
+
+        await callback_query.message.answer(
+            text.create_reminder_time,
+            reply_markup=kb.settings_notif
+        )
+        await state.set_state(states.CreateReminder.time)
+    else:
+        await callback_query.message.answer("Пожалуйста, выберите корректный день из календаря.", reply_markup=kb.menu)
+
 @router.callback_query()
 async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
     if callback.data == "create_project":
@@ -365,8 +485,26 @@ async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
                                       reply_markup=await kb.my_tasks(tasks=tasks))
         await state.update_data(level="list_task")
     elif callback.data == "settings_notif":
+        await bot.delete_message(chat_id=callback.message.chat.id, 
+                                 message_id=callback.message.message_id)
         await callback.message.answer(text.settings_notif_message, reply_markup=kb.settings_notif)
         await state.set_state(states.SettingsNotif.time)
+    elif callback.data == "reminders":
+        await bot.delete_message(chat_id=callback.message.chat.id, 
+                                 message_id=callback.message.message_id)
+        await callback.message.answer(text.reminders_message, reply_markup=kb.reminders)
+        await state.update_data(level="reminders")
+    elif callback.data == "my_reminders":
+        await bot.delete_message(chat_id=callback.message.chat.id,
+                                 message_id=callback.message.message_id)
+        reminders = await db.get_reminders(callback.from_user.id)
+        await callback.message.answer(text.reminders_message, reply_markup=await kb.my_reminders(reminders))
+        await state.update_data(level="my_reminders")
+    elif callback.data == "create_reminder":
+        await bot.delete_message(chat_id=callback.message.chat.id,
+                                 message_id=callback.message.message_id)
+        await callback.message.answer(text.create_reminder, reply_markup=kb.cancel)
+        await state.set_state(states.CreateReminder.title)
     elif callback.data == "back":
         await bot.delete_message(chat_id=callback.message.chat.id, 
                                  message_id=callback.message.message_id)
@@ -393,3 +531,12 @@ async def callback(callback: CallbackQuery, bot: Bot, state: FSMContext):
             tasks = await db.get_tasks(callback.from_user.id)
             await callback.message.answer(text.tasks_message_l,
                                           reply_markup=await kb.my_tasks(tasks=tasks))
+        elif level == "change_priority":
+            tasks = await db.get_tasks(callback.from_user.id)
+            await callback.message.answer(text.tasks_message_l,
+                                          reply_markup=await kb.my_tasks(tasks=tasks))
+        elif level == "reminders":
+            await callback.message.answer(text.reminders_message, reply_markup=kb.reminders)
+        elif level == "my_reminders":
+            reminders = await db.get_reminders(callback.from_user.id)
+            await callback.message.answer(text.reminders_message, reply_markup=await kb.my_reminders(reminders))

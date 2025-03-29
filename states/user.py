@@ -14,3 +14,10 @@ class UpdateTask(StatesGroup):
 
 class SettingsNotif(StatesGroup):
     time = State()
+
+class CreateReminder(StatesGroup):
+    title = State()
+    text = State()
+    date = State()
+    time = State()
+    rules = State()
