@@ -30,4 +30,4 @@ async def ai_manager_stream(question: str):
         yield full_text
 
         # Задержка, чтобы не перегрузить Telegram
-        time.sleep(1)
+        # time.sleep(1)

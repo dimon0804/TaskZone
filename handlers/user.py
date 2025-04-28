@@ -227,7 +227,7 @@ async def process_task_description(message: Message, state: FSMContext):
                 print(f"Ошибка редактирования: {e}")
 
             # Задержка, чтобы не перегрузить Telegram
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.6)
     await state.set_state(states.PomodoroState.working)
     asyncio.create_task(pomodoro_cycle(message, state)) 
 

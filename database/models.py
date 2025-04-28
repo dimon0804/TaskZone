@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, ForeignKey
+from sqlalchemy import Integer, String, ForeignKey, BigInteger
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from datetime import datetime
@@ -20,7 +20,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    tg_id: Mapped[int]  = mapped_column(Integer)
+    tg_id: Mapped[int] = mapped_column(BigInteger)
     name: Mapped[str] = mapped_column(String)
     created_at: Mapped[str] = mapped_column(String, default=now_moscow)
     last_active: Mapped[str] = mapped_column(String, default=now_moscow, onupdate=now_moscow)
