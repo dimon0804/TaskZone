@@ -10,7 +10,8 @@ from keyboards import user as kb
 from config import TASK_STATUSES, TASK_PRIORITIES
 from utils.calendar import CalendarKeyboard
 import re
-
+import asyncio
+from utils import ai_manager 
 
 router = Router()
 
@@ -175,27 +176,95 @@ async def create_reminder_rules(message: Message, state: FSMContext):
     await db.add_reminder(message.from_user.id, title, text_c, date, time, rules)
     await state.clear()
 
-@router.message(F.content_type==ContentType.TEXT)
+@router.message(states.PomodoroState.working, F.text.lower() == "завершить задачу")
+async def finish_task(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("✅ Задача завершена! Вы отлично поработали.", reply_markup=kb.menu)
+
+async def pomodoro_cycle(message: Message, state: FSMContext):
+    work_time = 25 * 60  # 25 минут работы
+    rest_time = 5 * 60   # 5 минут отдыха
+
+    while True:
+        user_state = await state.get_state()
+        if user_state != states.PomodoroState.working:
+            break
+        
+        await message.answer("⏰ Время работать! Сосредоточьтесь на задаче.")
+        await asyncio.sleep(work_time)
+
+        user_state = await state.get_state()
+        if user_state != states.PomodoroState.working:
+            break
+        
+        await message.answer("🎉 Отличная работа! Теперь 5 минут отдыха.")
+        await asyncio.sleep(rest_time)
+
+@router.message(states.PomodoroState.waiting_for_description)
+async def process_task_description(message: Message, state: FSMContext):
+    await state.update_data(task_description=message.text)
+
+    await message.answer(
+        "Описание задачи сохранено! ⏳ Начинаем работать по методу Помидоро! "
+        "Но для начала искусственный интеллект даст рекомендации... Пожалуйста, подождите немного.", 
+        reply_markup=kb.pomodoro_kb
+    )
+
+    sent_message = await message.answer("⌛ Генерация...")
+
+    full_text = ""
+
+    # Потоковая обработка данных
+    async for chunk in ai_manager.ai_manager_stream(message.text):
+        full_text = chunk
+        if full_text.strip():
+            try:
+                await sent_message.edit_text(
+                    f"Ответ от нейросети:\n\n<blockquote>{full_text}</blockquote>",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                print(f"Ошибка редактирования: {e}")
+
+            # Задержка, чтобы не перегрузить Telegram
+            await asyncio.sleep(1)
+    await state.set_state(states.PomodoroState.working)
+    asyncio.create_task(pomodoro_cycle(message, state)) 
+
+# Обработчик текстовых сообщений
+@router.message(F.content_type == ContentType.TEXT)
 async def text_message(message: Message, state: FSMContext):
     if message.text.lower() in ['проекты', '/project']:
         await message.answer(text.project_message, reply_markup=kb.project)
+    
     elif message.text.lower() in ['задачи', '/tasks']:
         await message.answer(text.tasks_message, reply_markup=kb.task)
+    
     elif message.text.lower() in ['профиль', '/profile']:
         user = await db.get_user(message.from_user.id)
         date_reg = user.created_at
         count_project = len(await db.get_projects(message.from_user.id))
         count_task = len(await db.get_tasks(message.from_user.id))
-        await message.answer(text.profile_message.format(date_reg=date_reg,
-                                                         count_project=count_project, 
-                                                         count_task=count_task,
-                                                         fullname=message.from_user.full_name), 
-                             reply_markup=kb.menu)
+        await message.answer(
+            text.profile_message.format(
+                date_reg=date_reg,
+                count_project=count_project,
+                count_task=count_task,
+                fullname=message.from_user.full_name
+            ),
+            reply_markup=kb.menu
+        )
+    
     elif message.text.lower() in ['напоминания', "/notifications"]:
         await message.answer(text.settings_notif_message, reply_markup=kb.notif)
+    
     elif message.text.lower() in ['отмена', '/cancel']:
         await state.clear()
         await message.answer(text.cancel, reply_markup=kb.menu)
+    
+    elif message.text.lower() == "быстрая задача":
+        await message.answer("Отлично! Опишите задачу, которую хотите выполнить:")
+        await state.set_state(states.PomodoroState.waiting_for_description)
 
 @router.callback_query(F.data.startswith("project_"))
 async def callback_project(callback: CallbackQuery, bot: Bot, state: FSMContext):

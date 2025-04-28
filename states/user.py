@@ -21,3 +21,7 @@ class CreateReminder(StatesGroup):
     date = State()
     time = State()
     rules = State()
+
+class PomodoroState(StatesGroup):
+    waiting_for_description = State()
+    working = State()

@@ -149,3 +149,10 @@ rules = ReplyKeyboardMarkup(resize_keyboard=True,
                                 [KeyboardButton(text="Раз в неделю")],
                                 [KeyboardButton(text="Раз в месяц")],
                             ])
+
+pomodoro_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Завершить задачу")]
+    ],
+    resize_keyboard=True
+)
